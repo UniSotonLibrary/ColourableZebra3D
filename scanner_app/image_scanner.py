@@ -22,7 +22,8 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 
 
 def _sanitize_name(name: str) -> str:
-    clean_name = re.sub(r"[^a-zA-Z0-9_\-]", "", (name or "").strip())
+    clean_name = re.sub(r"[^a-zA-Z0-9 _\-]", "", (name or "").strip())
+    clean_name = re.sub(r"\s+", " ", clean_name)
     return clean_name if clean_name else "UnnamedZebra"
 
 

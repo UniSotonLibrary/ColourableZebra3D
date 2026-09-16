@@ -26,6 +26,8 @@ TARGET_NAME = "AnimatedZebra"
 
 scene = bpy.context.scene
 scene.render.engine = 'CYCLES'
+saved_frame = scene.frame_current
+scene.frame_set(saved_frame)
 
 source_obj = bpy.data.objects.get(SOURCE_NAME)
 target_obj = bpy.data.objects.get(TARGET_NAME)
@@ -41,8 +43,7 @@ source_obj.select_set(True)
 target_obj.select_set(True)
 bpy.context.view_layer.objects.active = target_obj
 
-# Headless (-b) launches skip the depsgraph/UI update cycles a normal interactive
-# session gets for free, so the armature-deformed target mesh can be stale here.
+# Explicitly restore and evaluate the saved animation frame before baking.
 bpy.context.view_layer.update()
 bpy.context.evaluated_depsgraph_get().update()
 
@@ -112,12 +113,13 @@ baked_image.filepath_raw = OUTPUT_TEXTURE_PATH
 baked_image.file_format = 'PNG'
 baked_image.save()
 print(f"[Blender 5.0] Saved baked map: {{OUTPUT_TEXTURE_PATH}}")
+bpy.ops.wm.quit_blender()
 """
     try:
         with open(temp_worker, "w", encoding="utf-8") as f:
             f.write(blender_internal_code)
 
-        cmd = [str(BLENDER_EXE), "-b", str(BLEND_FILE), "--python-exit-code", "1", "-P", str(temp_worker)]
+        cmd = [str(BLENDER_EXE), str(BLEND_FILE), "--python-exit-code", "1", "-P", str(temp_worker)]
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -132,12 +134,9 @@ print(f"[Blender 5.0] Saved baked map: {{OUTPUT_TEXTURE_PATH}}")
         def _stream_output():
             for line in process.stdout:
                 print(line, end="")
-                # Blender itself can hang after logging this (e.g. lingering add-on
-                # threads); once it's printed, Blender's own work is done - force exit.
+                # The worker calls quit_blender after the output has been saved.
                 if "Blender quit" in line:
                     finished_cleanly["value"] = True
-                    process.kill()
-                    break
 
         reader_thread = threading.Thread(target=_stream_output, daemon=True)
         reader_thread.start()
