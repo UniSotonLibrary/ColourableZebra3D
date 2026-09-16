@@ -41,6 +41,11 @@ source_obj.select_set(True)
 target_obj.select_set(True)
 bpy.context.view_layer.objects.active = target_obj
 
+# Headless (-b) launches skip the depsgraph/UI update cycles a normal interactive
+# session gets for free, so the armature-deformed target mesh can be stale here.
+bpy.context.view_layer.update()
+bpy.context.evaluated_depsgraph_get().update()
+
 # Attach Source Texture
 source_mat = source_obj.active_material
 if not source_mat or not source_mat.node_tree:
@@ -84,10 +89,8 @@ target_nodes.active = target_tex_node
 bake_settings = scene.render.bake
 bake_settings.use_selected_to_active = True
 bake_settings.use_cage = False
-# Extremities (muzzle, hooves) diverge more between the low-poly proxy and the
-# detailed target mesh, so the old 0.04/0.08 reach left them unbaked (black).
-bake_settings.cage_extrusion = 0.1
-bake_settings.max_ray_distance = 0.3
+bake_settings.cage_extrusion = 0.04
+bake_settings.max_ray_distance = 0.08
 bake_settings.use_clear = True
 bake_settings.margin = 16
 

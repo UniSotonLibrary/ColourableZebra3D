@@ -102,7 +102,9 @@
     <canvas id="renderCanvas"></canvas>
 
     <script>
-        window.TEXTURES_API_URL = "https://api.github.com/repos/UniSotonLibrary/ColourableZebra3D/contents/docs/assets/textures";
+        // Served locally by scanner_app/local_server.py, which also exposes
+        // /api/textures returning the same JSON shape as GitHub's contents API.
+        window.TEXTURES_API_URL = "/api/textures";
     </script>
     <script src="./assets/viewer.js"></script>
 </body>
