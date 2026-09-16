@@ -1,11 +1,14 @@
 import os
 import subprocess
+import threading
 from pathlib import Path
 
 try:
     from .config import BLENDER_EXE, BLEND_FILE
 except ImportError:
     from config import BLENDER_EXE, BLEND_FILE
+
+BAKE_TIMEOUT_SECONDS = 300
 
 def run_blender_bake(source_jpg_path: Path, output_png_path: Path) -> bool:
     """Headlessly bakes texture from BlockyZebra to AnimatedZebra in Blender 5.0."""
@@ -67,6 +70,13 @@ target_tex_node = next((n for n in target_nodes if n.type == 'TEX_IMAGE'), None)
 if not target_tex_node:
     target_tex_node = target_nodes.new(type='ShaderNodeTexImage')
 
+# This node may already be wired into the Principled BSDF from a previous bake -
+# baking into an image that also feeds the shader creates the "circular dependency"
+# warning and corrupts the result with black/washed-out patches. Detach it first.
+for link in list(target_mat.node_tree.links):
+    if link.from_node == target_tex_node or link.to_node == target_tex_node:
+        target_mat.node_tree.links.remove(link)
+
 target_tex_node.image = baked_image
 target_nodes.active = target_tex_node
 
@@ -74,8 +84,10 @@ target_nodes.active = target_tex_node
 bake_settings = scene.render.bake
 bake_settings.use_selected_to_active = True
 bake_settings.use_cage = False
-bake_settings.cage_extrusion = 0.04
-bake_settings.max_ray_distance = 0.08
+# Extremities (muzzle, hooves) diverge more between the low-poly proxy and the
+# detailed target mesh, so the old 0.04/0.08 reach left them unbaked (black).
+bake_settings.cage_extrusion = 0.1
+bake_settings.max_ray_distance = 0.3
 bake_settings.use_clear = True
 bake_settings.margin = 16
 
@@ -111,11 +123,34 @@ print(f"[Blender 5.0] Saved baked map: {{OUTPUT_TEXTURE_PATH}}")
             encoding="utf-8",
             errors="replace",
         )
-        for line in process.stdout:
-            print(line, end="")
-        process.wait()
-        # Blender can exit 0 without --python-exit-code even after a script error, so also verify the file exists.
-        return process.returncode == 0 and output_png_path.exists()
+
+        finished_cleanly = {"value": False}
+
+        def _stream_output():
+            for line in process.stdout:
+                print(line, end="")
+                # Blender itself can hang after logging this (e.g. lingering add-on
+                # threads); once it's printed, Blender's own work is done - force exit.
+                if "Blender quit" in line:
+                    finished_cleanly["value"] = True
+                    process.kill()
+                    break
+
+        reader_thread = threading.Thread(target=_stream_output, daemon=True)
+        reader_thread.start()
+
+        try:
+            process.wait(timeout=BAKE_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            print(f"[Blender 5.0] Bake timed out after {BAKE_TIMEOUT_SECONDS}s and was terminated.")
+            return False
+
+        reader_thread.join(timeout=5)
+        # We may have force-killed the process ourselves after "Blender quit", so a
+        # non-zero return code from that is expected - trust the log line instead.
+        return (finished_cleanly["value"] or process.returncode == 0) and output_png_path.exists()
     finally:
         if temp_worker.exists():
             temp_worker.unlink()

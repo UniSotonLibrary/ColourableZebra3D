@@ -244,6 +244,7 @@ def capture_photo_from_webcam(save_path: Path) -> bool:
 
 
 def upload_texture_to_github(local_file_path: Path, remote_filename: str):
+    print(f"[INFO] Uploading '{remote_filename}' to GitHub...")
     token = load_github_token()
 
     remote_path = f"docs/assets/textures/{remote_filename}"
@@ -283,6 +284,8 @@ def upload_texture_to_github(local_file_path: Path, remote_filename: str):
         except ValueError:
             detail = ""
         raise RuntimeError(f"Upload of '{remote_filename}' failed ({response.status_code}): {detail}")
+
+    print(f"[INFO] Uploaded '{remote_filename}' successfully.")
 
 
 def process_zebra_textures(zebra_name: str, captured_image_path: Path, on_status=None):
@@ -324,8 +327,10 @@ def process_zebra_textures(zebra_name: str, captured_image_path: Path, on_status
     if on_status:
         on_status("Baking high-detail texture...")
 
+    print("[INFO] Starting Blender bake...")
     if not run_blender_bake(output_lowpoly_jpg, output_highpoly_png):
         raise RuntimeError("The high-poly texture bake failed.")
+    print("[INFO] Blender bake finished.")
 
     if on_status:
         on_status("Uploading textures...")
