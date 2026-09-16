@@ -186,7 +186,7 @@
 
         async function fetchTexturesList() {
             try {
-                const response = await fetch(`https://api.github.com/repos/jm1d22/ColourableZebra3D/contents/docs/assets/textures?t=${Date.now()}`);
+                const response = await fetch(`https://api.github.com/repos/UniSotonLibrary/ColourableZebra3D/contents/docs/assets/textures?t=${Date.now()}`);
                 if (!response.ok) {
                     throw new Error(`GitHub returned ${response.status}`);
                 }

@@ -83,7 +83,15 @@ bake_settings.pass_filter.clear()
 bake_settings.pass_filter.add('COLOR')
 
 print("[Blender 5.0] Running Texture Bake...")
-bpy.ops.object.bake(type='DIFFUSE', save_mode='INTERNAL')
+# In true background mode (-b) there is no window/view3d, so the bake operator's
+# own context lookup reports "No valid selected objects" - override it explicitly.
+bake_context = bpy.context.copy()
+bake_context["selected_objects"] = [source_obj, target_obj]
+bake_context["selected_editable_objects"] = [source_obj, target_obj]
+bake_context["active_object"] = target_obj
+bake_context["object"] = target_obj
+with bpy.context.temp_override(**bake_context):
+    bpy.ops.object.bake(type='DIFFUSE', save_mode='INTERNAL')
 
 baked_image.filepath_raw = OUTPUT_TEXTURE_PATH
 baked_image.file_format = 'PNG'
@@ -94,7 +102,7 @@ print(f"[Blender 5.0] Saved baked map: {{OUTPUT_TEXTURE_PATH}}")
         with open(temp_worker, "w", encoding="utf-8") as f:
             f.write(blender_internal_code)
 
-        cmd = [str(BLENDER_EXE), "-b", str(BLEND_FILE), "-P", str(temp_worker)]
+        cmd = [str(BLENDER_EXE), "-b", str(BLEND_FILE), "--python-exit-code", "1", "-P", str(temp_worker)]
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -106,7 +114,8 @@ print(f"[Blender 5.0] Saved baked map: {{OUTPUT_TEXTURE_PATH}}")
         for line in process.stdout:
             print(line, end="")
         process.wait()
-        return process.returncode == 0
+        # Blender can exit 0 without --python-exit-code even after a script error, so also verify the file exists.
+        return process.returncode == 0 and output_png_path.exists()
     finally:
         if temp_worker.exists():
             temp_worker.unlink()

@@ -1,1 +1,3 @@
 scanner_app/token.txt
+scanner_app/__pycache__/
+scanner_app/.texture_counter
