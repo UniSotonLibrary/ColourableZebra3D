@@ -10,7 +10,7 @@ let currentMaterial = null;
 let activeAnimGroup = null;
 let currentLoadTaskId = 0;
 
-let isHighPolyMode = false;
+let isHighPolyMode = true;
 let selectedZebraName = "";
 let availableZebras = [];
 let isSpinning = true;
