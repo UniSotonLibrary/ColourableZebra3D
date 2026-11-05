@@ -207,7 +207,7 @@ function loadModelAndTexture() {
 
         // Create and apply texture material
         const texturePath = `./assets/textures/${textureFile}?v=${Date.now()}`;
-        document.getElementById("textureImg").src = texturePath;
+        document.getElementById("textureImg").src = `./assets/textures/${selectedZebraName}.jpg?v=${Date.now()}`;
         currentMaterial = new BABYLON.StandardMaterial("zebraMat", scene);
         currentMaterial.diffuseTexture = new BABYLON.Texture(texturePath, scene, false, false);
         currentMaterial.diffuseTexture.coordinatesIndex = isHighPolyMode ? 1 : 0;
