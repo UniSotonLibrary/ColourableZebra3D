@@ -16,9 +16,6 @@ let availableZebras = [];
 let isSpinning = true;
 
 function log(msg) {
-    const l = document.getElementById("log");
-    l.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-    l.scrollTop = l.scrollHeight;
     console.log(`[ZebraViewer] ${msg}`);
 }
 
@@ -210,6 +207,7 @@ function loadModelAndTexture() {
 
         // Create and apply texture material
         const texturePath = `./assets/textures/${textureFile}?v=${Date.now()}`;
+        document.getElementById("textureImg").src = texturePath;
         currentMaterial = new BABYLON.StandardMaterial("zebraMat", scene);
         currentMaterial.diffuseTexture = new BABYLON.Texture(texturePath, scene, false, false);
         currentMaterial.diffuseTexture.coordinatesIndex = isHighPolyMode ? 1 : 0;

@@ -15,6 +15,7 @@ from config import TOKEN_FILE
 REPO_OWNER = "UniSotonLibrary"
 REPO_NAME = "ColourableZebra3D"
 BRANCH = "main"
+PREFERRED_USB_CAMERA_INDEX = 1
 # ============================================================
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -40,14 +41,33 @@ def load_github_token() -> str:
     return token
 
 
+def _available_camera_indices(max_devices: int = 5) -> list[int]:
+    available_indices = []
+    for camera_index in range(max_devices):
+        camera = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+        if camera.isOpened():
+            available_indices.append(camera_index)
+        camera.release()
+    return available_indices
+
+
 def capture_photo_from_webcam(save_path: Path) -> bool:
     """Opens a live camera preview with an on-screen shutter button (like a phone camera)."""
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    available_cameras = _available_camera_indices()
+    if not available_cameras:
+        raise RuntimeError("Could not open a webcam.")
+
+    selected_camera = (
+        PREFERRED_USB_CAMERA_INDEX
+        if PREFERRED_USB_CAMERA_INDEX in available_cameras
+        else available_cameras[0]
+    )
+    cap = cv2.VideoCapture(selected_camera, cv2.CAP_DSHOW)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
     if not cap.isOpened():
-        raise RuntimeError("Could not open webcam.")
+        raise RuntimeError("Could not open the selected webcam.")
 
     window_name = "Capture Coloring Sheet"
     state = {"captured": False, "cancelled": False}
@@ -75,7 +95,7 @@ def capture_photo_from_webcam(save_path: Path) -> bool:
             cv2.setMouseCallback(window_name, on_mouse, (button_center[0], button_center[1], button_radius))
 
             preview_frame = frame.copy()
-            cv2.putText(preview_frame, "Tap the button to capture | ESC to cancel", (20, 40),
+            cv2.putText(preview_frame, "Tap to capture | C: change camera | ESC: cancel", (20, 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
             cv2.circle(preview_frame, button_center, button_radius + 8, (255, 255, 255), 2)
             cv2.circle(preview_frame, button_center, button_radius, (255, 255, 255), -1)
@@ -85,6 +105,16 @@ def capture_photo_from_webcam(save_path: Path) -> bool:
             if key == 27:  # ESC
                 state["cancelled"] = True
                 break
+            if key in (ord("c"), ord("C")) and len(available_cameras) > 1:
+                current_position = available_cameras.index(selected_camera)
+                selected_camera = available_cameras[(current_position + 1) % len(available_cameras)]
+                cap.release()
+                cap = cv2.VideoCapture(selected_camera, cv2.CAP_DSHOW)
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+                if not cap.isOpened():
+                    raise RuntimeError(f"Could not switch to webcam {selected_camera}.")
+                continue
             if state["captured"]:
                 save_path.parent.mkdir(parents=True, exist_ok=True)
                 cv2.imwrite(str(save_path), frame)

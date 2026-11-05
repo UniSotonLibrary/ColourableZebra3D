@@ -38,6 +38,13 @@ INJECT_JS = r"""
     #zs-fab:disabled {
       background: #555; color: #999; cursor: not-allowed; box-shadow: none;
     }
+    #zs-refresh {
+      position: fixed; top: 20px; right: 84px; z-index: 99999;
+      width: 56px; height: 56px; border-radius: 50%; border: none;
+      background: #444; color: #fff; font-size: 28px; line-height: 56px;
+      text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      font-family: sans-serif;
+    }
     #zs-overlay {
       display: none; position: fixed; inset: 0; z-index: 99998;
       background: rgba(0,0,0,0.75); align-items: center; justify-content: center;
@@ -80,6 +87,13 @@ INJECT_JS = r"""
   fab.innerHTML = '+';
   fab.onclick = function () { pywebview.api.start_scan(); };
   document.body.appendChild(fab);
+
+  var refreshButton = document.createElement('button');
+  refreshButton.id = 'zs-refresh';
+  refreshButton.title = 'Reset scanner';
+  refreshButton.innerHTML = '&#8635;';
+  refreshButton.onclick = function () { window.location.reload(); };
+  document.body.appendChild(refreshButton);
 
   var overlay = document.createElement('div');
   overlay.id = 'zs-overlay';
