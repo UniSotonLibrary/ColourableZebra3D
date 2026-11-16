@@ -96,7 +96,7 @@ async function fetchTexturesList() {
             }
         });
 
-        availableZebras = Array.from(namesSet).sort();
+        availableZebras = Array.from(namesSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
         const previousSelection = selectedZebraName;
         selectedZebraName = availableZebras.includes(previousSelection) ? previousSelection : availableZebras[0] || "";
         populateDropdown(availableZebras);
